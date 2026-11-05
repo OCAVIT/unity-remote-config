@@ -1,0 +1,10 @@
+* text=auto
+*.bat text eol=crlf
+*.cs text
+*.unity text
+*.asset text
+*.mat text
+*.meta text
+*.png binary
+*.ico binary
+*.unitypackage binary

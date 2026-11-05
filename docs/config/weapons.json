@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "weapons": [
+    { "id": "pistol", "damage": 12, "cooldown": 0.4 },
+    { "id": "rifle", "damage": 22, "cooldown": 0.15 },
+    { "id": "shotgun", "damage": 45, "cooldown": 1.1 },
+    { "id": "sniper", "damage": 120, "cooldown": 2.5 }
+  ]
+}

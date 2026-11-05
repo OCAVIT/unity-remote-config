@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weapons remote config</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #dfe3ea;
+    --accent: #2f6fde; --code: #f0f2f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #11151c; --card: #1a2029; --text: #e6e9ef; --muted: #98a2b3; --line: #2c3442;
+            --accent: #6ea1ff; --code: #141921; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  p { margin: 0 0 8px; color: var(--muted); }
+  a { color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-top: 18px; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+  td.num, th.num { text-align: right; }
+  code, pre { font: 13px/1.5 Consolas, "SF Mono", Menlo, monospace; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0;
+        overflow-x: auto; white-space: pre; }
+  .urls code { word-break: break-all; }
+  .meta { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .grid .card { margin-top: 0; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .error { color: #d64545; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Weapons remote config</h1>
+  <p>Удалённый конфиг оружия для Unity-проекта
+    <a href="https://github.com/OCAVIT/unity-remote-config">OCAVIT/unity-remote-config</a>.
+    Файлы лежат в папке <code>docs/config</code> ветки <code>main</code>, GitHub Pages раздаёт их по адресам ниже.</p>
+
+  <div class="card urls">
+    <h2>Адреса конфига</h2>
+    <p>CSV (его загружает <code>RemoteConfigLoader</code> по умолчанию): <a id="csv-url" href="config/weapons.csv"><code></code></a></p>
+    <p>JSON (тот же конфиг, <code>schema_version</code> 1): <a id="json-url" href="config/weapons.json"><code></code></a></p>
+  </div>
+
+  <div class="card">
+    <h2>Текущие значения (загружены с сервера: <code>config/weapons.csv</code>)</h2>
+    <table>
+      <thead><tr><th>id</th><th class="num">damage</th><th class="num">cooldown, s</th><th class="num">DPS</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="4">Загрузка…</td></tr></tbody>
+    </table>
+    <div class="meta" id="meta"></div>
+  </div>
+
+  <div class="grid" style="margin-top:18px">
+    <div class="card"><h2>weapons.csv</h2><pre id="csv">…</pre></div>
+    <div class="card"><h2>weapons.json</h2><pre id="json">…</pre></div>
+  </div>
+</main>
+<script>
+  const csvUrl = new URL("config/weapons.csv", location.href).href;
+  const jsonUrl = new URL("config/weapons.json", location.href).href;
+  document.querySelector("#csv-url code").textContent = csvUrl;
+  document.querySelector("#json-url code").textContent = jsonUrl;
+
+  async function fetchText(url) {
+    const response = await fetch(url + "?t=" + Date.now(), { cache: "no-store" });
+    if (!response.ok) throw new Error(url + ": HTTP " + response.status);
+    return { text: await response.text(), modified: response.headers.get("Last-Modified") };
+  }
+
+  function rowsOf(csv) {
+    const lines = csv.trim().split(/\r?\n/).map(line => line.split(","));
+    const header = lines.shift().map(cell => cell.trim().toLowerCase());
+    const at = name => header.indexOf(name);
+    return lines.map(cells => ({ id: cells[at("id")], damage: cells[at("damage")], cooldown: cells[at("cooldown")] }));
+  }
+
+  fetchText(csvUrl).then(({ text, modified }) => {
+    document.getElementById("csv").textContent = text;
+    const tbody = document.getElementById("rows");
+    tbody.innerHTML = "";
+    for (const row of rowsOf(text)) {
+      const tr = document.createElement("tr");
+      const dps = Number(row.cooldown) > 0 ? (Number(row.damage) / Number(row.cooldown)).toFixed(1) : "—";
+      for (const [value, cls] of [[row.id, ""], [row.damage, "num"], [row.cooldown, "num"], [dps, "num"]]) {
+        const td = document.createElement("td");
+        td.textContent = value;
+        if (cls) td.className = cls;
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    document.getElementById("meta").textContent =
+      "Last-Modified на сервере: " + (modified || "—") + " · страница открыта: " + new Date().toUTCString();
+  }).catch(error => {
+    document.getElementById("rows").innerHTML = '<tr><td colspan="4" class="error"></td></tr>';
+    document.querySelector("#rows td").textContent = error.message;
+  });
+
+  fetchText(jsonUrl).then(({ text }) => { document.getElementById("json").textContent = text; })
+    .catch(error => { document.getElementById("json").textContent = error.message; });
+</script>
+</body>
+</html>

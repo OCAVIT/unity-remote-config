@@ -1,0 +1,5 @@
+id,damage,cooldown
+pistol,12,0.4
+rifle,22,0.15
+shotgun,45,1.1
+sniper,120,2.5
